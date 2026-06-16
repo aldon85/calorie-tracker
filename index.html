@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NutriTrack NZ - Calorie & Macro Tracker</title>
-    <!-- Include html5-qrcode library for barcode scanning -->
-    <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         :root {
             --bg-color: #f4f7f6;
@@ -61,7 +59,6 @@
             font-size: 0.9rem;
         }
 
-        /* Dashboard & Progress Cards */
         .card {
             background: var(--card-bg);
             border-radius: 12px;
@@ -132,7 +129,6 @@
             background-color: var(--danger-color);
         }
 
-        /* Macros Grid */
         .macros-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -166,7 +162,6 @@
             color: var(--primary-color);
         }
 
-        /* Action Buttons & Tabs */
         .action-tabs {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -199,7 +194,6 @@
             display: block;
         }
 
-        /* Forms */
         form {
             display: flex;
             flex-direction: column;
@@ -218,17 +212,13 @@
             flex: 1;
         }
 
-        .form-group.double {
-            flex: 2;
-        }
-
         form label {
             font-size: 0.8rem;
             font-weight: 600;
             color: var(--primary-color);
         }
 
-        input, select {
+        input {
             padding: 10px;
             border: 1px solid var(--border-color);
             border-radius: 6px;
@@ -236,7 +226,7 @@
             width: 100%;
         }
 
-        input:focus, select:focus {
+        input:focus {
             outline: 2px solid var(--primary-color);
         }
 
@@ -256,44 +246,47 @@
             background-color: var(--accent-hover);
         }
 
-        /* Scanner Styling */
-        .scanner-container {
-            text-align: center;
-        }
-
-        #scanner-view {
-            width: 100%;
-            background: #000;
-            border-radius: 8px;
-            overflow: hidden;
-            margin-top: 10px;
-        }
-
-        .scanner-status {
-            margin-top: 10px;
-            font-size: 0.9rem;
-            color: var(--text-muted);
-            min-height: 20px;
-        }
-
-        .scanner-actions {
+        /* Database Search Specific Layout Styles */
+        .search-container {
             display: flex;
-            gap: 10px;
-            margin-top: 10px;
+            gap: 8px;
         }
-
-        .btn-secondary {
-            background-color: #7f8c8d;
-            color: white;
-            padding: 10px;
-            border: none;
+        
+        #search-results {
+            margin-top: 15px;
+            max-height: 220px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
             border-radius: 6px;
-            cursor: pointer;
-            flex: 1;
-            font-weight: bold;
+            display: none;
         }
 
-        /* Food Log List */
+        .search-item {
+            padding: 10px;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            font-size: 0.9rem;
+            background-color: #fff;
+            transition: background 0.15s;
+        }
+
+        .search-item:hover {
+            background-color: #f1f5f9;
+        }
+
+        .search-item-brand {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .status-message {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 8px;
+            font-style: italic;
+        }
+
+        /* Log List Elements */
         .log-header {
             display: flex;
             justify-content: space-between;
@@ -373,10 +366,6 @@
             line-height: 1;
         }
 
-        .delete-btn:hover {
-            color: var(--danger-hover);
-        }
-
         .clear-all-btn {
             width: 100%;
             background-color: #7f8c8d;
@@ -389,12 +378,6 @@
             margin-top: 15px;
         }
 
-        .clear-all-btn:hover {
-            background-color: #95a5a6;
-        }
-
-        /* Utilities */
-        .text-center { text-align: center; }
         .empty-state {
             color: var(--text-muted);
             text-align: center;
@@ -402,16 +385,15 @@
             font-size: 0.95rem;
             font-style: italic;
         }
-        
-        /* Loading Spinner */
+
         .spinner {
             display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(0,0,0,0.1);
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(0,0,0,0.1);
             border-radius: 50%;
             border-top-color: var(--primary-color);
-            animation: spin 1s ease-in-out infinite;
+            animation: spin 0.8s linear infinite;
             vertical-align: middle;
             margin-right: 5px;
         }
@@ -423,10 +405,9 @@
 <div class="container">
     <header>
         <h1>NutriTrack NZ</h1>
-        <p>Calorie & Macro Tracker with Barcode Scanning</p>
+        <p>Calorie & Macro Tracker with Smart Database Search</p>
     </header>
 
-    <!-- Dashboard Summary Card -->
     <div class="card">
         <div class="target-setup">
             <label for="calorie-target">Daily Target:</label>
@@ -459,24 +440,34 @@
         </div>
     </div>
 
-    <!-- Actions Panel Tabs -->
     <div class="action-tabs">
-        <button type="button" class="tab-btn active" onclick="switchTab('manual-tab')">Add Manually</button>
-        <button type="button" class="tab-btn" onclick="switchTab('scanner-tab')">Scan Barcode</button>
+        <button type="button" class="tab-btn active" onclick="switchTab('search-tab')">Search Database</button>
+        <button type="button" class="tab-btn" onclick="switchTab('manual-tab')">Add Custom Item</button>
     </div>
 
-    <!-- Input Panels -->
     <div class="card">
-        <!-- Manual Log Form -->
-        <div id="manual-tab" class="input-panel active">
+        <div id="search-tab" class="input-panel active">
+            <div class="form-group">
+                <label for="search-input">Search Food Items Online</label>
+                <div class="search-container">
+                    <input type="text" id="search-input" placeholder="e.g., Mainland Cheese or Watties Beans">
+                    <button type="button" class="submit-btn" style="margin:0; padding:0 15px;" onclick="searchFoodDatabase()">Search</button>
+                </div>
+                <div id="search-status" class="status-message"></div>
+                
+                <div id="search-results"></div>
+            </div>
+        </div>
+
+        <div id="manual-tab" class="input-panel">
             <form id="manual-form">
                 <div class="form-group">
                     <label for="food-name">Food Item Name</label>
-                    <input type="text" id="food-name" placeholder="e.g., Grilled Chicken Breast" required>
+                    <input type="text" id="food-name" placeholder="e.g., Homemade Beef Stew" required>
                 </div>
                 
                 <div class="form-row">
-                    <div class="form-group double">
+                    <div class="form-group">
                         <label for="food-calories">Calories (kcal)</label>
                         <input type="number" id="food-calories" placeholder="0" required min="0">
                     </div>
@@ -500,26 +491,8 @@
                 <button type="submit" class="submit-btn">Add to Log</button>
             </form>
         </div>
-
-        <!-- Scanner Panel -->
-        <div id="scanner-tab" class="input-panel">
-            <div class="scanner-container">
-                <p style="font-size: 0.9rem; margin-bottom: 10px; color: var(--text-main);">
-                    Hold a food barcode steady in front of your camera.
-                </p>
-                
-                <div class="scanner-actions">
-                    <button type="button" class="submit-btn" id="start-scan-btn" onclick="initScanner()">Start Camera</button>
-                    <button type="button" class="btn-secondary" id="stop-scan-btn" onclick="stopScanner()" style="display:none;">Stop</button>
-                </div>
-
-                <div id="scanner-view"></div>
-                <div id="scanner-status" class="scanner-status">Camera status: Idle</div>
-            </div>
-        </div>
     </div>
 
-    <!-- Food Log Section -->
     <div class="log-header">
         <h2 style="color: var(--primary-color); font-size: 1.2rem;">Today's Entries</h2>
     </div>
@@ -533,33 +506,24 @@
 </div>
 
 <script>
-    // --- Application State ---
     let appData = {
         targetCalories: 2000,
         entries: []
     };
 
-    let html5QrcodeScanner = null;
-
-    // --- Core Initialisation ---
     document.addEventListener('DOMContentLoaded', () => {
-        // Load data from LocalStorage if it exists
-        const savedData = localStorage.getItem('nutriTrackData');
+        const savedData = localStorage.getItem('nutriTrackSearchData');
         if (savedData) {
             try {
                 appData = JSON.parse(savedData);
-                // Ensure structured defaults if user has older save files
                 if (!appData.entries) appData.entries = [];
                 if (!appData.targetCalories) appData.targetCalories = 2000;
             } catch (e) {
-                console.error("Error parsing saved data, resetting data structural metrics.", e);
+                console.error("Error structural load mapping data integrity.", e);
             }
         }
 
-        // Set initial target input value
         document.getElementById('calorie-target').value = appData.targetCalories;
-        
-        // Listen for target changes
         document.getElementById('calorie-target').addEventListener('input', (e) => {
             let val = parseInt(e.target.value);
             if (isNaN(val) || val < 1) val = 2000;
@@ -567,16 +531,17 @@
             saveAndRender();
         });
 
-        // Initial Layout Render
+        // Trigger input listener matching Enter keyboard button for quick searches
+        document.getElementById('search-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') searchFoodDatabase();
+        });
+
         saveAndRender();
     });
 
-    // --- LocalStorage & Rendering Engine ---
     function saveAndRender() {
-        // Save to LocalStorage
-        localStorage.setItem('nutriTrackData', JSON.stringify(appData));
+        localStorage.setItem('nutriTrackSearchData', JSON.stringify(appData));
 
-        // Calculate Totals
         let totals = { calories: 0, protein: 0, carbs: 0, fat: 0 };
         appData.entries.forEach(item => {
             totals.calories += item.calories;
@@ -585,19 +550,16 @@
             totals.fat += item.fat || 0;
         });
 
-        // Round macros nicely to 1 decimal point
         totals.protein = Math.round(totals.protein * 10) / 10;
         totals.carbs = Math.round(totals.carbs * 10) / 10;
         totals.fat = Math.round(totals.fat * 10) / 10;
 
-        // UI Updates - Metrics
         document.getElementById('total-calories').textContent = totals.calories;
         document.getElementById('target-calories-val').textContent = appData.targetCalories;
         document.getElementById('total-protein').textContent = totals.protein;
         document.getElementById('total-carbs').textContent = totals.carbs;
         document.getElementById('total-fat').textContent = totals.fat;
 
-        // UI Updates - Progress Bar & Remaining Counter
         const remaining = appData.targetCalories - totals.calories;
         const remainingTextElement = document.getElementById('remaining-text');
         if (remaining >= 0) {
@@ -619,7 +581,6 @@
             progressBar.classList.remove('overlimit');
         }
 
-        // UI Updates - Food Log List Building
         const logList = document.getElementById('log-list');
         const emptyMessage = document.getElementById('empty-message');
         
@@ -630,13 +591,11 @@
         } else {
             emptyMessage.style.display = 'none';
             
-            // Loop backwards to show newest entries on top
             for (let i = appData.entries.length - 1; i >= 0; i--) {
                 const entry = appData.entries[i];
                 const li = document.createElement('li');
                 li.className = 'log-item';
                 
-                // Construct safe markup representing nutrient macros if present
                 let macroMarkup = '';
                 if (entry.protein || entry.carbs || entry.fat) {
                     macroMarkup = `
@@ -656,7 +615,7 @@
                     </div>
                     <div class="item-right">
                         <div class="item-cals">${entry.calories} kcal</div>
-                        <button type="button" class="delete-btn" onclick="deleteEntry(${i})" title="Remove item">&times;</button>
+                        <button type="button" class="delete-btn" onclick="deleteEntry(${i})">&times;</button>
                     </div>
                 `;
                 logList.appendChild(li);
@@ -664,22 +623,118 @@
         }
     }
 
-    // --- Tab Switching Manager ---
     function switchTab(tabId) {
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         document.querySelectorAll('.input-panel').forEach(panel => panel.classList.remove('active'));
         
-        // Activate current selection
         event.currentTarget.classList.add('active');
         document.getElementById(tabId).classList.add('active');
-        
-        // Safely shutdown camera feed if moving away from scanner tab
-        if (tabId !== 'scanner-tab') {
-            stopScanner();
-        }
     }
 
-    // --- Manual Input Processing ---
+    // --- TEXT SEARCH FOOD DATABASE ENGINE ---
+    function searchFoodDatabase() {
+        const queryInput = document.getElementById('search-input');
+        const query = queryInput.value.trim();
+        const statusDiv = document.getElementById('search-status');
+        const resultsDiv = document.getElementById('search-results');
+
+        if (!query) {
+            statusDiv.textContent = "Please enter a keywords string to query.";
+            return;
+        }
+
+        statusDiv.innerHTML = '<div class="spinner"></div> Contacting database registry...';
+        resultsDiv.innerHTML = '';
+        resultsDiv.style.display = 'none';
+
+        // Connect directly via Open Food Facts full text search endpoint queries API
+        const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=24`;
+
+        fetch(url)
+            .then(res => {
+                if (!res.ok) throw new Error("Database validation timeout.");
+                return res.json();
+            })
+            .then(data => {
+                if (data.products && data.products.length > 0) {
+                    statusDiv.textContent = `Found ${data.products.length} products. Select an item below:`;
+                    resultsDiv.style.display = 'block';
+
+                    data.products.forEach(product => {
+                        // Gather name markers cleanly
+                        const name = product.product_name_en || product.product_name || "Unknown Product Description";
+                        const brand = product.brands ? product.brands.split(',')[0] : 'Generic Brand';
+                        
+                        // Capture data values safely inside a layout item row wrapper element
+                        const itemDiv = document.createElement('div');
+                        itemDiv.className = 'search-item';
+                        itemDiv.innerHTML = `
+                            <strong>${escapeHTML(name)}</strong>
+                            <div class="search-item-brand">${escapeHTML(brand)}</div>
+                        `;
+
+                        // When user clicks a search result item row instance
+                        itemDiv.onclick = () => {
+                            selectProduct(product, name, brand);
+                        };
+
+                        resultsDiv.appendChild(itemDiv);
+                    });
+                } else {
+                    statusDiv.innerHTML = '<span style="color:var(--danger-color);">No matching food items found. Try different keywords or add it manually.</span>';
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                statusDiv.innerHTML = '<span style="color:var(--danger-color);">Connection error. Please check your internet connectivity.</span>';
+            });
+    }
+
+    // --- PORTION LOGGING PROCESS FOR SELECTED SEARCH ITEM ---
+    function selectProduct(product, name, brand) {
+        const nutrients = product.nutriments || {};
+        
+        // Grab standard 100g parameters safely
+        let kcals_100g = nutrients['energy-kcal_100g'] || nutrients['energy-kcal'] || 0;
+        let prot_100g = nutrients['proteins_100g'] || 0;
+        let carbs_100g = nutrients['carbohydrates_100g'] || 0;
+        let fat_100g = nutrients['fat_100g'] || 0;
+
+        const displayName = `${name} (${brand})`;
+
+        // Prompt user right on spot for ingestion volume parameters
+        let portionInput = prompt(`Selected: "${displayName}"\n\nNutrients per 100g:\n- Calories: ${kcals_100g} kcal\n- Protein: ${prot_100g}g\n- Carbs: ${carbs_100g}g\n- Fat: ${fat_100g}g\n\nEnter how many grams/ml you consumed:`, "100");
+
+        if (portionInput === null) return; // User cancelled entry prompt
+
+        let amount = parseFloat(portionInput);
+        if (isNaN(amount) || amount <= 0) amount = 100; // Reset safe structural default if input fails float check
+
+        const factor = amount / 100;
+        const now = new Date();
+        const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        // Add dynamically modified parameters into running entry collections arrays
+        const computedEntry = {
+            name: `${displayName} (${amount}g)`,
+            calories: Math.round(kcals_100g * factor),
+            protein: Math.round((prot_100g * factor) * 10) / 10,
+            carbs: Math.round((carbs_100g * factor) * 10) / 10,
+            fat: Math.round((fat_100g * factor) * 10) / 10,
+            timestamp: timeString
+        };
+
+        appData.entries.push(computedEntry);
+        saveAndRender();
+
+        // Clear search interface state values cleanly
+        document.getElementById('search-input').value = '';
+        document.getElementById('search-status').textContent = `Logged: ${computedEntry.name}!`;
+        document.getElementById('search-results').innerHTML = '';
+        document.getElementById('search-results').style.display = 'none';
+    }
+
+    // --- MANUAL ENTRY SUBMIT HANDLER ---
     document.getElementById('manual-form').addEventListener('submit', (e) => {
         e.preventDefault();
         
@@ -692,7 +747,7 @@
         const now = new Date();
         const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-        const newEntry = {
+        const customEntry = {
             name: nameInput.value.trim(),
             calories: parseInt(calInput.value) || 0,
             protein: parseFloat(pInput.value) || 0,
@@ -701,156 +756,28 @@
             timestamp: timeString
         };
 
-        appData.entries.push(newEntry);
+        appData.entries.push(customEntry);
         saveAndRender();
         
-        // Reset form variables
         document.getElementById('manual-form').reset();
-        nameInput.focus();
+        switchTab('search-tab'); // Return layout focus cleanly
     });
 
-    // --- Barcode Scanner Engine (html5-qrcode Integration) ---
-    function initScanner() {
-        const statusDiv = document.getElementById('scanner-status');
-        statusDiv.innerHTML = '<div class="spinner"></div> Accessing camera...';
-        
-        document.getElementById('start-scan-btn').style.display = 'none';
-        document.getElementById('stop-scan-btn').style.display = 'inline-block';
-
-        // Configure hardware scanning interface parameters
-        // Configured box tailored well for reading horizontal rectangular retail barcodes
-        html5QrcodeScanner = new Html5Qrcode.Scanner(
-            "scanner-view", 
-            { 
-                fps: 12, 
-                qrbox: { width: 280, height: 160 },
-                rememberLastUsedCamera: true,
-                supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
-            }
-        );
-
-        html5QrcodeScanner.render(onScanSuccess, onScanFailure);
-    }
-
-    function stopScanner() {
-        if (html5QrcodeScanner) {
-            html5QrcodeScanner.clear().then(() => {
-                html5QrcodeScanner = null;
-                document.getElementById('start-scan-btn').style.display = 'inline-block';
-                document.getElementById('stop-scan-btn').style.display = 'none';
-                document.getElementById('scanner-status').textContent = "Camera status: Stopped";
-            }).catch(err => {
-                console.error("Failed to safely clear scanner hardware thread.", err);
-            });
-        }
-    }
-
-    function onScanSuccess(decodedText, decodedResult) {
-        // Vibrate phone briefly to signal success if hardware pipeline supports it
-        if (navigator.vibrate) navigator.vibrate(100);
-        
-        stopScanner();
-        
-        const statusDiv = document.getElementById('scanner-status');
-        statusDiv.innerHTML = `<div class="spinner"></div> Found Barcode: <strong>${decodedText}</strong>. Searching database...`;
-        
-        // Dispatch external API lookup to the open database api instance
-        lookupBarcode(decodedText);
-    }
-
-    function onScanFailure(error) {
-        // Keep scan loop continuous without filling logs with background framing failures
-    }
-
-    // --- Open Food Facts API Implementation ---
-    function lookupBarcode(barcode) {
-        const statusDiv = document.getElementById('scanner-status');
-        const url = `https://world.openfoodfacts.org/api/v2/product/${barcode}.json`;
-
-        fetch(url)
-            .then(response => {
-                if (!response.ok) throw new Error("Network latency failed validation checkout.");
-                return response.json();
-            })
-            .then(data => {
-                if (data.status === 1 && data.product) {
-                    const prod = data.product;
-                    const productName = prod.product_name_en || prod.product_name || "Unknown Scanned Product";
-                    const brand = prod.brands ? ` (${prod.brands.split(',')[0]})` : '';
-                    const finalName = productName + brand;
-                    
-                    // Nutritional structural metrics mappings matching standards
-                    const nutrients = prod.nutriments;
-                    
-                    // Open Food Facts returns values calibrated standardized per 100g 
-                    // Let's grab them safely, handling missing values gracefully
-                    let kcals_100g = nutrients['energy-kcal_100g'] || nutrients['energy-kcal'] || 0;
-                    let prot_100g = nutrients['proteins_100g'] || 0;
-                    let carbs_100g = nutrients['carbohydrates_100g'] || 0;
-                    let fat_100g = nutrients['fat_100g'] || 0;
-
-                    // Standardize tracking by prompting user for consumption volume
-                    // Keeps tracking accurate based on portion size
-                    let portionGrams = prompt(`Found: "${finalName}"
-
-Nutrients per 100g:
-- Calories: ${kcals_100g} kcal
-- Protein: ${prot_100g}g
-- Carbs: ${carbs_100g}g
-- Fat: ${fat_100g}g
-
-Enter how many grams/ml you consumed:`, "100");
-                    
-                    if (portionGrams === null) {
-                        statusDiv.textContent = "Log cancelled.";
-                        return;
-                    }
-                    
-                    let factor = parseFloat(portionGrams) / 100;
-                    if (isNaN(factor) || factor <= 0) factor = 1; // Default to 100g if entered text is corrupt
-
-                    const now = new Date();
-                    const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-                    const scannedEntry = {
-                        name: `${finalName} (${Math.round(factor * 100)}g)`,
-                        calories: Math.round(kcals_100g * factor),
-                        protein: Math.round((prot_100g * factor) * 10) / 10,
-                        carbs: Math.round((carbs_100g * factor) * 10) / 10,
-                        fat: Math.round((fat_100g * factor) * 10) / 10,
-                        timestamp: timeString
-                    };
-
-                    appData.entries.push(scannedEntry);
-                    saveAndRender();
-                    
-                    statusDiv.innerHTML = `<span style="color:var(--accent-hover); font-weight:bold;">Successfully logged ${scannedEntry.name}!</span>`;
-                    switchTab('manual-tab'); // Return user back to see entry list cleanly
-                } else {
-                    statusDiv.innerHTML = `<span style="color:var(--danger-color);">Product code not found in global database. Feel free to log manually.</span>`;
-                }
-            })
-            .catch(err => {
-                console.error(err);
-                statusDiv.innerHTML = `<span style="color:var(--danger-color);">Error fetching product details. Please check your network connection.</span>`;
-            });
-    }
-
-    // --- Entry Modification Utilities ---
     function deleteEntry(index) {
         appData.entries.splice(index, 1);
         saveAndRender();
     }
 
+    document.getElementById('search-status').textContent = "";
+
     function resetDay() {
-        if (confirm("Are you sure you want to completely reset all logged food entries for today?")) {
+        if (confirm("Reset layout data entries entirely back to zero for today?")) {
             appData.entries = [];
             saveAndRender();
-            document.getElementById('scanner-status').textContent = "Camera status: Idle";
+            document.getElementById('search-status').textContent = "";
         }
     }
 
-    // Standard string sanitisation to avoid UI breaking layout scripts via manual string entries
     function escapeHTML(str) {
         return str.replace(/[&<>'"]/g, 
             tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
