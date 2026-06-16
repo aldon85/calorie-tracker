@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NutriTrack NZ - Calorie & Macro Tracker</title>
+    <!-- Include html5-qrcode library for barcode scanning -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        :root {
+            --bg-color: #f4f7f6;
+            --primary-color: #2c3e50;
+            --accent-color: #2ecc71;
+            --accent-hover: #27ae60;
+            --danger-color: #e74c3c;
+            --danger-hover: #c0392b;
+            --card-bg: #ffffff;
+            --border-color: #e2e8f0;
+            --text-main: #333333;
+            --text-muted: #7f8c8d;
+            
+            /* Macro Colors */
+            --protein-color: #3498db;
+            --carbs-color: #f1c40f;
+            --fat-color: #e67e22;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 15px;
+            padding-bottom: 60px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 10px 0;
+        }
+
+        header h1 {
+            color: var(--primary-color);
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* Dashboard & Progress Cards */
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            border: 1px solid var(--border-color);
+        }
+
+        .target-setup {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px dashed var(--border-color);
+        }
+
+        .target-setup label {
+            font-weight: bold;
+            font-size: 0.9rem;
+            color: var(--primary-color);
+        }
+
+        .target-setup input {
+            width: 90px;
+            padding: 6px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        .progress-summary {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .calorie-display {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: var(--primary-color);
+        }
+
+        .calorie-subtext {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .progress-bar-container {
+            background-color: var(--border-color);
+            border-radius: 8px;
+            height: 12px;
+            width: 100%;
+            overflow: hidden;
+            margin: 12px 0;
+        }
+
+        .progress-bar {
+            background-color: var(--accent-color);
+            height: 100%;
+            width: 0%;
+            transition: width 0.4s ease, background-color 0.3s ease;
+        }
+
+        .progress-bar.overlimit {
+            background-color: var(--danger-color);
+        }
+
+        /* Macros Grid */
+        .macros-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .macro-box {
+            text-align: center;
+            padding: 10px;
+            border-radius: 8px;
+            background-color: #f8fafc;
+            border: 1px solid var(--border-color);
+        }
+
+        .macro-box.protein { border-top: 4px solid var(--protein-color); }
+        .macro-box.carbs { border-top: 4px solid var(--carbs-color); }
+        .macro-box.fat { border-top: 4px solid var(--fat-color); }
+
+        .macro-title {
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .macro-val {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        /* Action Buttons & Tabs */
+        .action-tabs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .tab-btn {
+            padding: 12px;
+            background-color: #e2e8f0;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            color: var(--primary-color);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.95rem;
+        }
+
+        .tab-btn.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .input-panel {
+            display: none;
+        }
+
+        .input-panel.active {
+            display: block;
+        }
+
+        /* Forms */
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex: 1;
+        }
+
+        .form-group.double {
+            flex: 2;
+        }
+
+        form label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        input, select {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.95rem;
+            width: 100%;
+        }
+
+        input:focus, select:focus {
+            outline: 2px solid var(--primary-color);
+        }
+
+        button.submit-btn {
+            padding: 12px;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 5px;
+        }
+
+        button.submit-btn:hover {
+            background-color: var(--accent-hover);
+        }
+
+        /* Scanner Styling */
+        .scanner-container {
+            text-align: center;
+        }
+
+        #scanner-view {
+            width: 100%;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .scanner-status {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            min-height: 20px;
+        }
+
+        .scanner-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .btn-secondary {
+            background-color: #7f8c8d;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            flex: 1;
+            font-weight: bold;
+        }
+
+        /* Food Log List */
+        .log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .log-list {
+            list-style: none;
+        }
+
+        .log-item {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        .item-info {
+            flex: 1;
+        }
+
+        .item-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--primary-color);
+        }
+
+        .item-meta {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .item-macros {
+            display: flex;
+            gap: 8px;
+            margin-top: 4px;
+        }
+
+        .macro-tag {
+            font-size: 0.75rem;
+            padding: 1px 5px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+        .tag-p { background-color: #e3f2fd; color: #1e88e5; }
+        .tag-c { background-color: #fffde7; color: #fbc02d; }
+        .tag-f { background-color: #fff3e0; color: #f57c00; }
+
+        .item-right {
+            text-align: right;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .item-cals {
+            font-weight: 700;
+            font-size: 1.05rem;
+            color: var(--primary-color);
+        }
+
+        .delete-btn {
+            background: none;
+            border: none;
+            color: var(--danger-color);
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 5px;
+            line-height: 1;
+        }
+
+        .delete-btn:hover {
+            color: var(--danger-hover);
+        }
+
+        .clear-all-btn {
+            width: 100%;
+            background-color: #7f8c8d;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+
+        .clear-all-btn:hover {
+            background-color: #95a5a6;
+        }
+
+        /* Utilities */
+        .text-center { text-align: center; }
+        .empty-state {
+            color: var(--text-muted);
+            text-align: center;
+            padding: 30px 10px;
+            font-size: 0.95rem;
+            font-style: italic;
+        }
+        
+        /* Loading Spinner */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0,0,0,0.1);
+            border-radius: 50%;
+            border-top-color: var(--primary-color);
+            animation: spin 1s ease-in-out infinite;
+            vertical-align: middle;
+            margin-right: 5px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>NutriTrack NZ</h1>
+        <p>Calorie & Macro Tracker with Barcode Scanning</p>
+    </header>
+
+    <!-- Dashboard Summary Card -->
+    <div class="card">
+        <div class="target-setup">
+            <label for="calorie-target">Daily Target:</label>
+            <input type="number" id="calorie-target" value="2000" min="500" max="10000">
+            <span>kcal</span>
+        </div>
+
+        <div class="progress-summary">
+            <div class="calorie-display"><span id="total-calories">0</span> / <span id="target-calories-val">2000</span></div>
+            <div class="calorie-subtext" id="remaining-text">2000 kcal remaining</div>
+        </div>
+
+        <div class="progress-bar-container">
+            <div id="progress-bar" class="progress-bar"></div>
+        </div>
+
+        <div class="macros-grid">
+            <div class="macro-box protein">
+                <div class="macro-title">Protein</div>
+                <div class="macro-val"><span id="total-protein">0</span>g</div>
+            </div>
+            <div class="macro-box carbs">
+                <div class="macro-title">Carbs</div>
+                <div class="macro-val"><span id="total-carbs">0</span>g</div>
+            </div>
+            <div class="macro-box fat">
+                <div class="macro-title">Fat</div>
+                <div class="macro-val"><span id="total-fat">0</span>g</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions Panel Tabs -->
+    <div class="action-tabs">
+        <button type="button" class="tab-btn active" onclick="switchTab('manual-tab')">Add Manually</button>
+        <button type="button" class="tab-btn" onclick="switchTab('scanner-tab')">Scan Barcode</button>
+    </div>
+
+    <!-- Input Panels -->
+    <div class="card">
+        <!-- Manual Log Form -->
+        <div id="manual-tab" class="input-panel active">
+            <form id="manual-form">
+                <div class="form-group">
+                    <label for="food-name">Food Item Name</label>
+                    <input type="text" id="food-name" placeholder="e.g., Grilled Chicken Breast" required>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group double">
+                        <label for="food-calories">Calories (kcal)</label>
+                        <input type="number" id="food-calories" placeholder="0" required min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="food-protein">Protein (g)</label>
+                        <input type="number" id="food-protein" placeholder="0" min="0" step="0.1">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="food-carbs">Carbs (g)</label>
+                        <input type="number" id="food-carbs" placeholder="0" min="0" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label for="food-fat">Fat (g)</label>
+                        <input type="number" id="food-fat" placeholder="0" min="0" step="0.1">
+                    </div>
+                </div>
+
+                <button type="submit" class="submit-btn">Add to Log</button>
+            </form>
+        </div>
+
+        <!-- Scanner Panel -->
+        <div id="scanner-tab" class="input-panel">
+            <div class="scanner-container">
+                <p style="font-size: 0.9rem; margin-bottom: 10px; color: var(--text-main);">
+                    Hold a food barcode steady in front of your camera.
+                </p>
+                
+                <div class="scanner-actions">
+                    <button type="button" class="submit-btn" id="start-scan-btn" onclick="initScanner()">Start Camera</button>
+                    <button type="button" class="btn-secondary" id="stop-scan-btn" onclick="stopScanner()" style="display:none;">Stop</button>
+                </div>
+
+                <div id="scanner-view"></div>
+                <div id="scanner-status" class="scanner-status">Camera status: Idle</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Food Log Section -->
+    <div class="log-header">
+        <h2 style="color: var(--primary-color); font-size: 1.2rem;">Today's Entries</h2>
+    </div>
+    
+    <div id="log-container">
+        <ul id="log-list" class="log-list"></ul>
+        <div id="empty-message" class="empty-state">No entries logged for today yet.</div>
+    </div>
+
+    <button type="button" class="clear-all-btn" onclick="resetDay()">Clear / Reset Day</button>
+</div>
+
+<script>
+    // --- Application State ---
+    let appData = {
+        targetCalories: 2000,
+        entries: []
+    };
+
+    let html5QrcodeScanner = null;
+
+    // --- Core Initialisation ---
+    document.addEventListener('DOMContentLoaded', () => {
+        // Load data from LocalStorage if it exists
+        const savedData = localStorage.getItem('nutriTrackData');
+        if (savedData) {
+            try {
+                appData = JSON.parse(savedData);
+                // Ensure structured defaults if user has older save files
+                if (!appData.entries) appData.entries = [];
+                if (!appData.targetCalories) appData.targetCalories = 2000;
+            } catch (e) {
+                console.error("Error parsing saved data, resetting data structural metrics.", e);
+            }
+        }
+
+        // Set initial target input value
+        document.getElementById('calorie-target').value = appData.targetCalories;
+        
+        // Listen for target changes
+        document.getElementById('calorie-target').addEventListener('input', (e) => {
+            let val = parseInt(e.target.value);
+            if (isNaN(val) || val < 1) val = 2000;
+            appData.targetCalories = val;
+            saveAndRender();
+        });
+
+        // Initial Layout Render
+        saveAndRender();
+    });
+
+    // --- LocalStorage & Rendering Engine ---
+    function saveAndRender() {
+        // Save to LocalStorage
+        localStorage.setItem('nutriTrackData', JSON.stringify(appData));
+
+        // Calculate Totals
+        let totals = { calories: 0, protein: 0, carbs: 0, fat: 0 };
+        appData.entries.forEach(item => {
+            totals.calories += item.calories;
+            totals.protein += item.protein || 0;
+            totals.carbs += item.carbs || 0;
+            totals.fat += item.fat || 0;
+        });
+
+        // Round macros nicely to 1 decimal point
+        totals.protein = Math.round(totals.protein * 10) / 10;
+        totals.carbs = Math.round(totals.carbs * 10) / 10;
+        totals.fat = Math.round(totals.fat * 10) / 10;
+
+        // UI Updates - Metrics
+        document.getElementById('total-calories').textContent = totals.calories;
+        document.getElementById('target-calories-val').textContent = appData.targetCalories;
+        document.getElementById('total-protein').textContent = totals.protein;
+        document.getElementById('total-carbs').textContent = totals.carbs;
+        document.getElementById('total-fat').textContent = totals.fat;
+
+        // UI Updates - Progress Bar & Remaining Counter
+        const remaining = appData.targetCalories - totals.calories;
+        const remainingTextElement = document.getElementById('remaining-text');
+        if (remaining >= 0) {
+            remainingTextElement.textContent = `${remaining} kcal remaining`;
+            remainingTextElement.style.color = 'var(--text-muted)';
+        } else {
+            remainingTextElement.textContent = `${Math.abs(remaining)} kcal OVER limit!`;
+            remainingTextElement.style.color = 'var(--danger-color)';
+        }
+
+        const progressBar = document.getElementById('progress-bar');
+        let percentage = (totals.calories / appData.targetCalories) * 100;
+        
+        if (percentage > 100) {
+            progressBar.style.width = '100%';
+            progressBar.classList.add('overlimit');
+        } else {
+            progressBar.style.width = `${percentage}%`;
+            progressBar.classList.remove('overlimit');
+        }
+
+        // UI Updates - Food Log List Building
+        const logList = document.getElementById('log-list');
+        const emptyMessage = document.getElementById('empty-message');
+        
+        logList.innerHTML = '';
+        
+        if (appData.entries.length === 0) {
+            emptyMessage.style.display = 'block';
+        } else {
+            emptyMessage.style.display = 'none';
+            
+            // Loop backwards to show newest entries on top
+            for (let i = appData.entries.length - 1; i >= 0; i--) {
+                const entry = appData.entries[i];
+                const li = document.createElement('li');
+                li.className = 'log-item';
+                
+                // Construct safe markup representing nutrient macros if present
+                let macroMarkup = '';
+                if (entry.protein || entry.carbs || entry.fat) {
+                    macroMarkup = `
+                        <div class="item-macros">
+                            ${entry.protein ? `<span class="macro-tag tag-p">P: ${entry.protein}g</span>` : ''}
+                            ${entry.carbs ? `<span class="macro-tag tag-c">C: ${entry.carbs}g</span>` : ''}
+                            ${entry.fat ? `<span class="macro-tag tag-f">F: ${entry.fat}g</span>` : ''}
+                        </div>
+                    `;
+                }
+
+                li.innerHTML = `
+                    <div class="item-info">
+                        <div class="item-name">${escapeHTML(entry.name)}</div>
+                        <div class="item-meta">${entry.timestamp || ''}</div>
+                        ${macroMarkup}
+                    </div>
+                    <div class="item-right">
+                        <div class="item-cals">${entry.calories} kcal</div>
+                        <button type="button" class="delete-btn" onclick="deleteEntry(${i})" title="Remove item">&times;</button>
+                    </div>
+                `;
+                logList.appendChild(li);
+            }
+        }
+    }
+
+    // --- Tab Switching Manager ---
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.input-panel').forEach(panel => panel.classList.remove('active'));
+        
+        // Activate current selection
+        event.currentTarget.classList.add('active');
+        document.getElementById(tabId).classList.add('active');
+        
+        // Safely shutdown camera feed if moving away from scanner tab
+        if (tabId !== 'scanner-tab') {
+            stopScanner();
+        }
+    }
+
+    // --- Manual Input Processing ---
+    document.getElementById('manual-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        
+        const nameInput = document.getElementById('food-name');
+        const calInput = document.getElementById('food-calories');
+        const pInput = document.getElementById('food-protein');
+        const cInput = document.getElementById('food-carbs');
+        const fInput = document.getElementById('food-fat');
+
+        const now = new Date();
+        const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        const newEntry = {
+            name: nameInput.value.trim(),
+            calories: parseInt(calInput.value) || 0,
+            protein: parseFloat(pInput.value) || 0,
+            carbs: parseFloat(cInput.value) || 0,
+            fat: parseFloat(fInput.value) || 0,
+            timestamp: timeString
+        };
+
+        appData.entries.push(newEntry);
+        saveAndRender();
+        
+        // Reset form variables
+        document.getElementById('manual-form').reset();
+        nameInput.focus();
+    });
+
+    // --- Barcode Scanner Engine (html5-qrcode Integration) ---
+    function initScanner() {
+        const statusDiv = document.getElementById('scanner-status');
+        statusDiv.innerHTML = '<div class="spinner"></div> Accessing camera...';
+        
+        document.getElementById('start-scan-btn').style.display = 'none';
+        document.getElementById('stop-scan-btn').style.display = 'inline-block';
+
+        // Configure hardware scanning interface parameters
+        // Configured box tailored well for reading horizontal rectangular retail barcodes
+        html5QrcodeScanner = new Html5Qrcode.Scanner(
+            "scanner-view", 
+            { 
+                fps: 12, 
+                qrbox: { width: 280, height: 160 },
+                rememberLastUsedCamera: true,
+                supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
+            }
+        );
+
+        html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+    }
+
+    function stopScanner() {
+        if (html5QrcodeScanner) {
+            html5QrcodeScanner.clear().then(() => {
+                html5QrcodeScanner = null;
+                document.getElementById('start-scan-btn').style.display = 'inline-block';
+                document.getElementById('stop-scan-btn').style.display = 'none';
+                document.getElementById('scanner-status').textContent = "Camera status: Stopped";
+            }).catch(err => {
+                console.error("Failed to safely clear scanner hardware thread.", err);
+            });
+        }
+    }
+
+    function onScanSuccess(decodedText, decodedResult) {
+        // Vibrate phone briefly to signal success if hardware pipeline supports it
+        if (navigator.vibrate) navigator.vibrate(100);
+        
+        stopScanner();
+        
+        const statusDiv = document.getElementById('scanner-status');
+        statusDiv.innerHTML = `<div class="spinner"></div> Found Barcode: <strong>${decodedText}</strong>. Searching database...`;
+        
+        // Dispatch external API lookup to the open database api instance
+        lookupBarcode(decodedText);
+    }
+
+    function onScanFailure(error) {
+        // Keep scan loop continuous without filling logs with background framing failures
+    }
+
+    // --- Open Food Facts API Implementation ---
+    function lookupBarcode(barcode) {
+        const statusDiv = document.getElementById('scanner-status');
+        const url = `https://world.openfoodfacts.org/api/v2/product/${barcode}.json`;
+
+        fetch(url)
+            .then(response => {
+                if (!response.ok) throw new Error("Network latency failed validation checkout.");
+                return response.json();
+            })
+            .then(data => {
+                if (data.status === 1 && data.product) {
+                    const prod = data.product;
+                    const productName = prod.product_name_en || prod.product_name || "Unknown Scanned Product";
+                    const brand = prod.brands ? ` (${prod.brands.split(',')[0]})` : '';
+                    const finalName = productName + brand;
+                    
+                    // Nutritional structural metrics mappings matching standards
+                    const nutrients = prod.nutriments;
+                    
+                    // Open Food Facts returns values calibrated standardized per 100g 
+                    // Let's grab them safely, handling missing values gracefully
+                    let kcals_100g = nutrients['energy-kcal_100g'] || nutrients['energy-kcal'] || 0;
+                    let prot_100g = nutrients['proteins_100g'] || 0;
+                    let carbs_100g = nutrients['carbohydrates_100g'] || 0;
+                    let fat_100g = nutrients['fat_100g'] || 0;
+
+                    // Standardize tracking by prompting user for consumption volume
+                    // Keeps tracking accurate based on portion size
+                    let portionGrams = prompt(`Found: "${finalName}"
+
+Nutrients per 100g:
+- Calories: ${kcals_100g} kcal
+- Protein: ${prot_100g}g
+- Carbs: ${carbs_100g}g
+- Fat: ${fat_100g}g
+
+Enter how many grams/ml you consumed:`, "100");
+                    
+                    if (portionGrams === null) {
+                        statusDiv.textContent = "Log cancelled.";
+                        return;
+                    }
+                    
+                    let factor = parseFloat(portionGrams) / 100;
+                    if (isNaN(factor) || factor <= 0) factor = 1; // Default to 100g if entered text is corrupt
+
+                    const now = new Date();
+                    const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                    const scannedEntry = {
+                        name: `${finalName} (${Math.round(factor * 100)}g)`,
+                        calories: Math.round(kcals_100g * factor),
+                        protein: Math.round((prot_100g * factor) * 10) / 10,
+                        carbs: Math.round((carbs_100g * factor) * 10) / 10,
+                        fat: Math.round((fat_100g * factor) * 10) / 10,
+                        timestamp: timeString
+                    };
+
+                    appData.entries.push(scannedEntry);
+                    saveAndRender();
+                    
+                    statusDiv.innerHTML = `<span style="color:var(--accent-hover); font-weight:bold;">Successfully logged ${scannedEntry.name}!</span>`;
+                    switchTab('manual-tab'); // Return user back to see entry list cleanly
+                } else {
+                    statusDiv.innerHTML = `<span style="color:var(--danger-color);">Product code not found in global database. Feel free to log manually.</span>`;
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                statusDiv.innerHTML = `<span style="color:var(--danger-color);">Error fetching product details. Please check your network connection.</span>`;
+            });
+    }
+
+    // --- Entry Modification Utilities ---
+    function deleteEntry(index) {
+        appData.entries.splice(index, 1);
+        saveAndRender();
+    }
+
+    function resetDay() {
+        if (confirm("Are you sure you want to completely reset all logged food entries for today?")) {
+            appData.entries = [];
+            saveAndRender();
+            document.getElementById('scanner-status').textContent = "Camera status: Idle";
+        }
+    }
+
+    // Standard string sanitisation to avoid UI breaking layout scripts via manual string entries
+    function escapeHTML(str) {
+        return str.replace(/[&<>'"]/g, 
+            tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+        );
+    }
+</script>
+
+</body>
+</html>
